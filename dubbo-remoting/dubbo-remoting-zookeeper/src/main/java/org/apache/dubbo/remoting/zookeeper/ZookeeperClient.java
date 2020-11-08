@@ -21,6 +21,10 @@ import org.apache.dubbo.common.URL;
 import java.util.List;
 import java.util.concurrent.Executor;
 
+/**
+ * Dubbo 封装的 Zookeeper 客户端
+ * 用与 Zookeeper 进行交互
+ */
 public interface ZookeeperClient {
 
     void create(String path, boolean ephemeral);

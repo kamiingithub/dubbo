@@ -94,24 +94,29 @@ public abstract class AbstractRetryTask implements TimerTask {
     }
 
     protected void reput(Timeout timeout, long tick) {
+        // 边界检查
         if (timeout == null) {
             throw new IllegalArgumentException();
         }
-
+        // 检查定时任务
         Timer timer = timeout.timer();
         if (timer.isStop() || timeout.isCancelled() || isCancel()) {
             return;
         }
+        // 次数递增
         times++;
+        // 添加定时任务
         timer.newTimeout(timeout.task(), tick, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void run(Timeout timeout) throws Exception {
+        // 检测定时任务状态和时间轮状态
         if (timeout.isCancelled() || timeout.timer().isStop() || isCancel()) {
             // other thread cancel this timeout or stop the timer.
             return;
         }
+        // 检查重试次数
         if (times > retryTimes) {
             // reach the most times of retry.
             logger.warn("Final failed to execute task " + taskName + ", url: " + url + ", retry " + retryTimes + " times.");
@@ -121,10 +126,12 @@ public abstract class AbstractRetryTask implements TimerTask {
             logger.info(taskName + " : " + url);
         }
         try {
+            // 执行重试
             doRetry(url, registry, timeout);
         } catch (Throwable t) { // Ignore all the exceptions and wait for the next retry
             logger.warn("Failed to execute task " + taskName + ", url: " + url + ", waiting for again, cause:" + t.getMessage(), t);
             // reput this task when catch exception.
+            // 重新添加定时任务，等待重试
             reput(timeout, retryPeriod);
         }
     }

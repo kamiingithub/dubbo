@@ -126,6 +126,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
     @Override
     public void doRegister(URL url) {
         try {
+            // 根据dynamic参数决定是否为持久性节点
             zkClient.create(toUrlPath(url), url.getParameter(DYNAMIC_KEY, true));
         } catch (Throwable e) {
             throw new RpcException("Failed to register " + url + " to zookeeper " + getUrl() + ", cause: " + e.getMessage(), e);
@@ -145,19 +146,27 @@ public class ZookeeperRegistry extends FailbackRegistry {
     public void doSubscribe(final URL url, final NotifyListener listener) {
         try {
             if (ANY_VALUE.equals(url.getServiceInterface())) {
+                // A.监听所有 Service 层节点的订阅请求
+
+                // 获取根节点
                 String root = toRootPath();
+                // 获取NotifyListener对应的ChildListener
                 ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.computeIfAbsent(url, k -> new ConcurrentHashMap<>());
                 ChildListener zkListener = listeners.computeIfAbsent(listener, k -> (parentPath, currentChilds) -> {
                     for (String child : currentChilds) {
                         child = URL.decode(child);
                         if (!anyServices.contains(child)) {
+                            // 记录该节点已经订阅过
                             anyServices.add(child);
+                            // 该ChildListener要做的就是触发对具体Service节点的订阅
                             subscribe(url.setPath(child).addParameters(INTERFACE_KEY, child,
                                     Constants.CHECK_KEY, String.valueOf(false)), k);
                         }
                     }
                 });
+                // 保证根节点存在
                 zkClient.create(root, false);
+                // 第一次订阅的时候，要处理当前已有的Service层节点
                 List<String> services = zkClient.addChildListener(root, zkListener);
                 if (CollectionUtils.isNotEmpty(services)) {
                     for (String service : services) {
@@ -168,16 +177,25 @@ public class ZookeeperRegistry extends FailbackRegistry {
                     }
                 }
             } else {
+                // B.订阅 URL 中明确指定了 Service 层接口的订阅请求
                 List<URL> urls = new ArrayList<>();
+                // 要订阅的所有path
                 for (String path : toCategoriesPath(url)) {
+                    // 订阅URL对应的Listener集合
                     ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.computeIfAbsent(url, k -> new ConcurrentHashMap<>());
+                    // 一个NotifyListener关联一个ChildListener，这个ChildListener会回调
+                    // ZookeeperRegistry.notify()方法，其中会回调当前NotifyListener
                     ChildListener zkListener = listeners.computeIfAbsent(listener, k -> (parentPath, currentChilds) -> ZookeeperRegistry.this.notify(url, k, toUrlsWithEmpty(url, parentPath, currentChilds)));
+                    // 尝试创建持久节点，主要是为了确保当前path在Zookeeper上存在
                     zkClient.create(path, false);
+                    // 这一个ChildListener会添加到多个path上
                     List<String> children = zkClient.addChildListener(path, zkListener);
                     if (children != null) {
+                        // 如果没有Provider注册，toUrlsWithEmpty()方法会返回empty协议的URL
                         urls.addAll(toUrlsWithEmpty(url, path, children));
                     }
                 }
+                // 初次订阅的时候，会主动调用一次notify()方法，通知NotifyListener处理当前已有的URL等注册数据
                 notify(url, listener, urls);
             }
         } catch (Throwable e) {

@@ -52,6 +52,8 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
     protected static final ReentrantLock LOCK = new ReentrantLock();
 
     // Registry Collection Map<RegistryAddress, Registry>
+    // Key 为 Zookeeper 节点地址，Value 是相应的 ZookeeperClient 实例
+    // 缓存实例
     protected static final Map<String, Registry> REGISTRIES = new HashMap<>();
 
     private static final AtomicBoolean destroyed = new AtomicBoolean(false);
@@ -142,6 +144,7 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
         return url.toServiceStringWithoutResolving();
     }
 
+    // 创建registry
     protected abstract Registry createRegistry(URL url);
 
 

@@ -37,6 +37,10 @@ import static org.apache.dubbo.common.constants.CommonConstants.TIMEOUT_KEY;
  * AbstractZookeeperTransporter is abstract implements of ZookeeperTransporter.
  * <p>
  * If you want to extends this, implements createZookeeperClient.
+ *
+ * AbstractZookeeperTransporter 的核心功能有如下：
+ *     缓存 ZookeeperClient 实例；
+ *     在某个 Zookeeper 节点无法连接时，切换到备用 Zookeeper 地址。
  */
 public abstract class AbstractZookeeperTransporter implements ZookeeperTransporter {
     private static final Logger logger = LoggerFactory.getLogger(ZookeeperTransporter.class);

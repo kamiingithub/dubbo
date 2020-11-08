@@ -49,14 +49,19 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     /*  retry task map */
 
+    // 注册失败的 URL 集合，其中 Key 是注册失败的 URL，Value 是对应的重试任务。
     private final ConcurrentMap<URL, FailedRegisteredTask> failedRegistered = new ConcurrentHashMap<URL, FailedRegisteredTask>();
 
+    // 取消注册失败的 URL 集合，其中 Key 是取消注册失败的 URL，Value 是对应的重试任务。
     private final ConcurrentMap<URL, FailedUnregisteredTask> failedUnregistered = new ConcurrentHashMap<URL, FailedUnregisteredTask>();
 
+    // 订阅失败 URL 集合，其中 Key 是订阅失败的 URL + Listener 集合，Value 是相应的重试任务。
     private final ConcurrentMap<Holder, FailedSubscribedTask> failedSubscribed = new ConcurrentHashMap<Holder, FailedSubscribedTask>();
 
+    // 取消订阅失败的 URL 集合，其中 Key 是取消订阅失败的 URL + Listener 集合，Value 是相应的重试任务。
     private final ConcurrentMap<Holder, FailedUnsubscribedTask> failedUnsubscribed = new ConcurrentHashMap<Holder, FailedUnsubscribedTask>();
 
+    // 通知失败的 URL 集合，其中 Key 是通知失败的 URL + Listener 集合，Value 是相应的重试任务。
     private final ConcurrentMap<Holder, FailedNotifiedTask> failedNotified = new ConcurrentHashMap<Holder, FailedNotifiedTask>();
 
     /**
@@ -65,6 +70,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     private final int retryPeriod;
 
     // Timer for failure retry, regular check if there is a request for failure, and if there is, an unlimited retry
+    // 用于定时执行失败重试操作的时间轮
     private final HashedWheelTimer retryTimer;
 
     public FailbackRegistry(URL url) {
@@ -101,12 +107,14 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     private void addFailedRegistered(URL url) {
         FailedRegisteredTask oldOne = failedRegistered.get(url);
         if (oldOne != null) {
+            // 已经存在重试任务，则无须创建，直接返回
             return;
         }
         FailedRegisteredTask newTask = new FailedRegisteredTask(url, this);
         oldOne = failedRegistered.putIfAbsent(url, newTask);
         if (oldOne == null) {
             // never has a retry task. then start a new task for retry.
+            // 如果是新建的重试任务，则提交到时间轮中，等待retryPeriod毫秒后执行
             retryTimer.newTimeout(newTask, retryPeriod, TimeUnit.MILLISECONDS);
         }
     }
@@ -154,11 +162,14 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     private void removeFailedSubscribed(URL url, NotifyListener listener) {
         Holder h = new Holder(url, listener);
+        // 1.清理订阅任务
         FailedSubscribedTask f = failedSubscribed.remove(h);
         if (f != null) {
             f.cancel();
         }
+        // 2.清理取消订阅任务
         removeFailedUnsubscribed(url, listener);
+        // 3.清理对应的notify任务
         removeFailedNotified(url, listener);
     }
 
@@ -228,17 +239,22 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     @Override
     public void register(URL url) {
+        // (1)根据 registryUrl 中 accepts 参数指定的匹配模式，决定是否接受当前要注册的 Provider URL
         if (!acceptable(url)) {
             logger.info("URL " + url + " will not be registered to Registry. Registry " + url + " does not accept service of this protocol type.");
             return;
         }
+        // (2)调用父类 AbstractRegistry 的 register() 方法，将 Provider URL 写入 registered 集合中
         super.register(url);
+        // (3)删除失败map中对应的缓存,并停止相关的重试任务
         removeFailedRegistered(url);
         removeFailedUnregistered(url);
         try {
             // Sending a registration request to the server side
+            // (4)与服务发现组件进行交互
             doRegister(url);
         } catch (Exception e) {
+            // 出现异常，根据 URL 参数以及异常的类型，进行分类处理
             Throwable t = e;
 
             // If the startup detection is opened, the Exception is thrown directly.
@@ -256,6 +272,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             }
 
             // Record a failed registration request to a failed list, retry regularly
+            // 放入注册失败的缓存
             addFailedRegistered(url);
         }
     }
@@ -282,6 +299,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     @Override
     public void unregister(URL url) {
         super.unregister(url);
+        // 先删除失败map中对应的缓存
         removeFailedRegistered(url);
         removeFailedUnregistered(url);
         try {
@@ -305,6 +323,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             }
 
             // Record a failed registration request to a failed list, retry regularly
+            // 放入取消注册失败的缓存
             addFailedUnregistered(url);
         }
     }
@@ -333,7 +352,13 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             doSubscribe(url, listener);
         } catch (Exception e) {
             Throwable t = e;
-
+            /**
+             * AbstractRegistry 通过本地缓存提供了一种容错机制，保证了服务的可靠性。
+             *
+             * 在网络抖动等原因而导致订阅失败时
+             * Consumer 端的 Registry 就可以调用 getCacheUrls() 方法获取本地缓存
+             * 从而得到最近注册的 Provider URL
+             */
             List<URL> urls = getCacheUrls(url);
             if (CollectionUtils.isNotEmpty(urls)) {
                 notify(url, listener, urls);
