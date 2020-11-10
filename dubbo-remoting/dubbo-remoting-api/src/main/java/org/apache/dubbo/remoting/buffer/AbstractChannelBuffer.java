@@ -32,6 +32,11 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     private int markedWriterIndex;
 
+    /**
+     * reader、writer 会后移 readerIndex 索引
+     *
+     * @return
+     */
     @Override
     public int readerIndex() {
         return readerIndex;
@@ -58,6 +63,11 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         this.writerIndex = writerIndex;
     }
 
+    /**
+     * set、get 不会后移 readerIndex 索引
+     * @param readerIndex
+     * @param writerIndex
+     */
     @Override
     public void setIndex(int readerIndex, int writerIndex) {
         if (readerIndex < 0 || readerIndex > writerIndex || writerIndex > capacity()) {
@@ -217,8 +227,11 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     @Override
     public void readBytes(ChannelBuffer dst, int dstIndex, int length) {
+        // 检测可读字节数是否足够
         checkReadableBytes(length);
+        // 将readerIndex之后的length个字节数读取到dst数组中dstIndex ~ dstIndex+length的位置
         getBytes(readerIndex, dst, dstIndex, length);
+        // 将readerIndex后移length个字节
         readerIndex += length;
     }
 
@@ -278,7 +291,9 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     @Override
     public void writeBytes(ChannelBuffer src, int srcIndex, int length) {
+        // 将src数组中srcIndex~srcIndex+length的数据写入当前buffer中 writerIndex~writerIndex+length的位置
         setBytes(writerIndex, src, srcIndex, length);
+        // 将writeIndex后移length个字节
         writerIndex += length;
     }
 

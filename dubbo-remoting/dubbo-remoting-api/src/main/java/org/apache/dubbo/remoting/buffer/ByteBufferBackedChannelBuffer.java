@@ -88,10 +88,12 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
         ByteBuffer data = buffer.duplicate();
         try {
+            // 移动ByteBuffer中的指针
             data.limit(index + length).position(index);
         } catch (IllegalArgumentException e) {
             throw new IndexOutOfBoundsException();
         }
+        // 通过ByteBuffer的get()方法实现读取
         data.get(dst, dstIndex, length);
     }
 
@@ -159,7 +161,9 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     @Override
     public void setBytes(int index, byte[] src, int srcIndex, int length) {
         ByteBuffer data = buffer.duplicate();
+        // 移动ByteBuffer中的指针
         data.limit(index + length).position(index);
+        // 将数据写入底层的ByteBuffer中
         data.put(src, srcIndex, length);
     }
 
