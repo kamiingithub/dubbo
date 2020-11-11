@@ -48,8 +48,14 @@ public abstract class AbstractServer extends AbstractEndpoint implements Remotin
     protected static final String SERVER_THREAD_POOL_NAME = "DubboServerHandler";
     private static final Logger logger = LoggerFactory.getLogger(AbstractServer.class);
     ExecutorService executor;
+    /**
+     * 该 Server 的本地地址
+     */
     private InetSocketAddress localAddress;
     private InetSocketAddress bindAddress;
+    /**
+     * 该 Server 能接收的最大连接数，0则表示没有限制
+     */
     private int accepts;
     private int idleTimeout;
 
@@ -68,6 +74,7 @@ public abstract class AbstractServer extends AbstractEndpoint implements Remotin
         this.accepts = url.getParameter(ACCEPTS_KEY, DEFAULT_ACCEPTS);
         this.idleTimeout = url.getParameter(IDLE_TIMEOUT_KEY, DEFAULT_IDLE_TIMEOUT);
         try {
+            // 抽象方法启动server
             doOpen();
             if (logger.isInfoEnabled()) {
                 logger.info("Start " + getClass().getSimpleName() + " bind " + getBindAddress() + ", export " + getLocalAddress());
@@ -76,6 +83,7 @@ public abstract class AbstractServer extends AbstractEndpoint implements Remotin
             throw new RemotingException(url.toInetSocketAddress(), null, "Failed to bind " + getClass().getSimpleName()
                     + " on " + getLocalAddress() + ", cause: " + t.getMessage(), t);
         }
+        // 获取该Server关联的线程池
         executor = executorRepository.createExecutorIfAbsent(url);
     }
 

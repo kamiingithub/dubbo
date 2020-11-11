@@ -42,24 +42,32 @@ public class TaskQueue<R extends Runnable> extends LinkedBlockingQueue<Runnable>
         executor = exec;
     }
 
+    /**
+     * 这里封装了优先创建线程执行任务的逻辑
+     * @param runnable
+     * @return
+     */
     @Override
     public boolean offer(Runnable runnable) {
         if (executor == null) {
             throw new RejectedExecutionException("The task queue does not have executor!");
         }
-
+        // 获取当前线程池中的活跃线程数
         int currentPoolThreadSize = executor.getPoolSize();
         // have free worker. put task into queue to let the worker deal with task.
         if (executor.getSubmittedTaskCount() < currentPoolThreadSize) {
+            // 当前有线程空闲，直接将任务提交到队列中，空闲线程会直接从中获取任务执行
             return super.offer(runnable);
         }
 
         // return false to let executor create new worker.
         if (currentPoolThreadSize < executor.getMaximumPoolSize()) {
+            // ***当前没有空闲线程，但是还可以创建新线程，则返回false，迫使线程池创建新线程来执行任务
             return false;
         }
 
         // currentPoolThreadSize >= max
+        // 当前线程数已经达到上限，只能放到队列中缓存了
         return super.offer(runnable);
     }
 

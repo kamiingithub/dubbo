@@ -42,11 +42,16 @@ public class NettyServerHandler extends ChannelDuplexHandler {
     /**
      * the cache for alive worker channel.
      * <ip:port, dubbo channel>
+     *
+     * 记录了当前 Server 创建的所有 Channel
      */
     private final Map<String, Channel> channels = new ConcurrentHashMap<String, Channel>();
 
     private final URL url;
 
+    /**
+     * NettyServerHandler 内几乎所有方法都会触发该 Dubbo ChannelHandler 对象
+     */
     private final ChannelHandler handler;
 
     public NettyServerHandler(URL url, ChannelHandler handler) {

@@ -68,7 +68,13 @@ public class NettyServer extends AbstractServer implements RemotingServer {
      */
 	private io.netty.channel.Channel channel;
 
+    /**
+     * 处理连接
+     */
     private EventLoopGroup bossGroup;
+    /**
+     * 处理channel中的I/O事件
+     */
     private EventLoopGroup workerGroup;
 
     public NettyServer(URL url, ChannelHandler handler) throws RemotingException {
@@ -90,10 +96,12 @@ public class NettyServer extends AbstractServer implements RemotingServer {
         workerGroup = NettyEventLoopFactory.eventLoopGroup(
                 getUrl().getPositiveParameter(IO_THREADS_KEY, Constants.DEFAULT_IO_THREADS),
                 "NettyServerWorker");
-
+        // 创建NettyServerHandler，它是一个Netty中的ChannelHandler实现，不是Dubbo Remoting层的ChannelHandler接口的实现
         final NettyServerHandler nettyServerHandler = new NettyServerHandler(getUrl(), this);
+        // 获取当前NettyServer创建的所有Channel，这里的channels集合中的Channel不是Netty中的Channel对象，而是Dubbo Remoting层的Channel对象
         channels = nettyServerHandler.getChannels();
 
+        // 初始化ServerBootstrap，指定boss和worker EventLoopGroup
         bootstrap.group(bossGroup, workerGroup)
                 .channel(NettyEventLoopFactory.serverSocketChannelClass())
                 .option(ChannelOption.SO_REUSEADDR, Boolean.TRUE)
@@ -104,20 +112,25 @@ public class NettyServer extends AbstractServer implements RemotingServer {
                     protected void initChannel(SocketChannel ch) throws Exception {
                         // FIXME: should we use getTimeout()?
                         int idleTimeout = UrlUtils.getIdleTimeout(getUrl());
+                        // NettyCodecAdapter中会创建Decoder和Encoder
                         NettyCodecAdapter adapter = new NettyCodecAdapter(getCodec(), getUrl(), NettyServer.this);
                         if (getUrl().getParameter(SSL_ENABLED_KEY, false)) {
                             ch.pipeline().addLast("negotiation",
                                     SslHandlerInitializer.sslServerHandler(getUrl(), nettyServerHandler));
                         }
                         ch.pipeline()
+                                // 注册Decoder和Encoder
                                 .addLast("decoder", adapter.getDecoder())
                                 .addLast("encoder", adapter.getEncoder())
+                                // 注册IdleStateHandler(netty提供的工具型 ChannelHandler，用于定时心跳请求的功能或是自动关闭长时间空闲连接的功能)
                                 .addLast("server-idle-handler", new IdleStateHandler(0, 0, idleTimeout, MILLISECONDS))
                                 .addLast("handler", nettyServerHandler);
                     }
                 });
         // bind
+        // 绑定指定的地址和端口
         ChannelFuture channelFuture = bootstrap.bind(getBindAddress());
+        // 阻塞等待bind操作完成
         channelFuture.syncUninterruptibly();
         channel = channelFuture.channel();
 
