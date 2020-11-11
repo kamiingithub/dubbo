@@ -44,6 +44,8 @@ final class NettyChannel extends AbstractChannel {
     private static final Logger logger = LoggerFactory.getLogger(NettyChannel.class);
     /**
      * the cache for netty channel and dubbo channel
+     *
+     * 缓存当前 JVM 中 Netty 框架 Channel 与 Dubbo Channel 之间的映射关系
      */
     private static final ConcurrentMap<Channel, NettyChannel> CHANNEL_MAP = new ConcurrentHashMap<Channel, NettyChannel>();
     /**
@@ -154,14 +156,17 @@ final class NettyChannel extends AbstractChannel {
     @Override
     public void send(Object message, boolean sent) throws RemotingException {
         // whether the channel is closed
+        // 调用AbstractChannel的send()方法检测连接是否可用
         super.send(message, sent);
 
         boolean success = true;
         int timeout = 0;
         try {
+            // 依赖Netty框架的Channel发送数据
             ChannelFuture future = channel.writeAndFlush(message);
             if (sent) {
                 // wait timeout ms
+                // 等待发送结束，有超时时间
                 timeout = getUrl().getPositiveParameter(TIMEOUT_KEY, DEFAULT_TIMEOUT);
                 success = future.await(timeout);
             }

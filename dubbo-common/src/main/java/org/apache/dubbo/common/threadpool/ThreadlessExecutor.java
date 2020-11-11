@@ -40,6 +40,9 @@ import java.util.concurrent.TimeoutException;
 public class ThreadlessExecutor extends AbstractExecutorService {
     private static final Logger logger = LoggerFactory.getLogger(ThreadlessExecutor.class.getName());
 
+    /**
+     * 阻塞队列，用来在 IO 线程和业务线程之间传递任务
+     */
     private final BlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
 
     private ExecutorService sharedExecutor;
@@ -81,11 +84,14 @@ public class ThreadlessExecutor extends AbstractExecutorService {
          * There's no need to worry that {@link #finished} is not thread-safe. Checking and updating of
          * 'finished' only appear in waitAndDrain, since waitAndDrain is binding to one RPC call (one thread), the call
          * of it is totally sequential.
+         *
+         * 检测当前ThreadlessExecutor状态
          */
         if (finished) {
             return;
         }
 
+        // 获取阻塞队列中获取任务
         Runnable runnable = queue.take();
 
         synchronized (lock) {
@@ -93,6 +99,7 @@ public class ThreadlessExecutor extends AbstractExecutorService {
             runnable.run();
         }
 
+        // 如果阻塞队列中还有其他任务，也需要一并执行
         runnable = queue.poll();
         while (runnable != null) {
             try {
@@ -132,9 +139,12 @@ public class ThreadlessExecutor extends AbstractExecutorService {
     @Override
     public void execute(Runnable runnable) {
         synchronized (lock) {
+            // 判断业务线程是否还在等待响应结果
             if (!waiting) {
+                // 不等待，则直接交给共享线程池处理任务
                 sharedExecutor.execute(runnable);
             } else {
+                // 业务线程还在等待，则将任务写入队列，然后由业务线程自己执行
                 queue.add(runnable);
             }
         }

@@ -22,6 +22,9 @@ import org.apache.dubbo.remoting.RemotingException;
 import org.apache.dubbo.remoting.exchange.support.MultiMessage;
 
 /**
+ * 专门处理 MultiMessage 的 ChannelHandler 实现
+ *
+ * 在原有 ChannelHandler 的基础上添加了一些增强功能，装饰器模式
  *
  * @see MultiMessage
  */
