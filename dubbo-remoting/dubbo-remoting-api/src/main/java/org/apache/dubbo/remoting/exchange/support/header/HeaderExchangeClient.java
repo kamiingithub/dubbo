@@ -42,12 +42,20 @@ import static org.apache.dubbo.remoting.utils.UrlUtils.getIdleTimeout;
 
 /**
  * DefaultMessageClient
+ *
+ * Client的装饰器
+ *
+ * 1-维持与 Server 的长连状态，这是通过定时发送心跳消息实现的
+ * 2-在因故障掉线之后，进行重连，这是通过定时检查连接状态实现的
  */
 public class HeaderExchangeClient implements ExchangeClient {
 
     private final Client client;
     private final ExchangeChannel channel;
 
+    /**
+     * 搭载心跳、重连的时间轮
+     */
     private static final HashedWheelTimer IDLE_CHECK_TIMER = new HashedWheelTimer(
             new NamedThreadFactory("dubbo-client-idleCheck", true), 1, TimeUnit.SECONDS, TICKS_PER_WHEEL);
     private HeartbeatTimerTask heartBeatTimerTask;
@@ -60,7 +68,9 @@ public class HeaderExchangeClient implements ExchangeClient {
 
         if (startTimer) {
             URL url = client.getUrl();
+            // 启动重连任务
             startReconnectTask(url);
+            // 启动心跳任务
             startHeartBeatTask(url);
         }
     }
@@ -139,8 +149,11 @@ public class HeaderExchangeClient implements ExchangeClient {
     @Override
     public void close(int timeout) {
         // Mark the client into the closure process
+        // 将closing字段设置为true
         startClose();
+        // 关闭心跳定时任务和重连定时任务
         doClose();
+        // 关闭HeaderExchangeChannel
         channel.close(timeout);
     }
 
@@ -188,10 +201,14 @@ public class HeaderExchangeClient implements ExchangeClient {
 
     private void startHeartBeatTask(URL url) {
         if (!client.canHandleIdle()) {
+            // 初始化AbstractTimerTask的内部类
             AbstractTimerTask.ChannelProvider cp = () -> Collections.singletonList(HeaderExchangeClient.this);
+            // 计算心跳间隔，最小间隔不能低于1s
             int heartbeat = getHeartbeat(url);
             long heartbeatTick = calculateLeastDuration(heartbeat);
+            // 创建心跳任务
             this.heartBeatTimerTask = new HeartbeatTimerTask(cp, heartbeatTick, heartbeat);
+            // 提交到IDLE_CHECK_TIMER这个时间轮中等待执行
             IDLE_CHECK_TIMER.newTimeout(heartBeatTimerTask, heartbeatTick, TimeUnit.MILLISECONDS);
         }
     }

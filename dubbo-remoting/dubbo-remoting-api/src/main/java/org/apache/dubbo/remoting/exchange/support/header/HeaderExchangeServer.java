@@ -49,6 +49,8 @@ import static org.apache.dubbo.remoting.utils.UrlUtils.getIdleTimeout;
 
 /**
  * ExchangeServerImpl
+ *
+ *  RemotingServer 的装饰器
  */
 public class HeaderExchangeServer implements ExchangeServer {
 
@@ -65,6 +67,7 @@ public class HeaderExchangeServer implements ExchangeServer {
     public HeaderExchangeServer(RemotingServer server) {
         Assert.notNull(server, "server == null");
         this.server = server;
+        // 启动定时器
         startIdleCheckTask(getUrl());
     }
 
@@ -101,15 +104,18 @@ public class HeaderExchangeServer implements ExchangeServer {
 
     @Override
     public void close(final int timeout) {
+        // 将底层RemotingServer的closing字段设置为true，表示当前Server正在关闭，不再接收连接
         startClose();
         if (timeout > 0) {
             final long max = (long) timeout;
             final long start = System.currentTimeMillis();
             if (getUrl().getParameter(Constants.CHANNEL_SEND_READONLYEVENT_KEY, true)) {
+                // 发送ReadOnly事件请求通知客户端
                 sendChannelReadOnlyEvent();
             }
             while (HeaderExchangeServer.this.isRunning()
                     && System.currentTimeMillis() - start < max) {
+                // 循环等待客户端断开连接
                 try {
                     Thread.sleep(10);
                 } catch (InterruptedException e) {
@@ -117,7 +123,9 @@ public class HeaderExchangeServer implements ExchangeServer {
                 }
             }
         }
+        // 将自身closed字段设置为true，取消CloseTimerTask定时任务
         doClose();
+        // 关闭Transport层的Server
         server.close(timeout);
     }
 
