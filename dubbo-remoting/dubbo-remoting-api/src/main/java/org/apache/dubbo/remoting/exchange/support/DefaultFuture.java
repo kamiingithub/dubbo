@@ -199,6 +199,12 @@ public class DefaultFuture extends CompletableFuture<Object> {
         received(channel, response, false);
     }
 
+    /**
+     * 收到响应
+     * @param channel
+     * @param response
+     * @param timeout
+     */
     public static void received(Channel channel, Response response, boolean timeout) {
         try {
             // 清理FUTURES中记录的请求ID与DefaultFuture之间的映射关系

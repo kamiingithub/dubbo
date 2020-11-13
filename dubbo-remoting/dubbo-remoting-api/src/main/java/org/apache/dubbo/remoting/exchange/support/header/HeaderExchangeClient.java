@@ -44,6 +44,7 @@ import static org.apache.dubbo.remoting.utils.UrlUtils.getIdleTimeout;
  * DefaultMessageClient
  *
  * Client的装饰器
+ * ExchangeChannel 的装饰器
  *
  * 1-维持与 Server 的长连状态，这是通过定时发送心跳消息实现的
  * 2-在因故障掉线之后，进行重连，这是通过定时检查连接状态实现的

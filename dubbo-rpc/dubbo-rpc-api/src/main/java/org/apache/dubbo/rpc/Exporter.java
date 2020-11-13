@@ -28,12 +28,16 @@ public interface Exporter<T> {
     /**
      * get invoker.
      *
+     * 获取底层封装的Invoker对象
+     *
      * @return invoker
      */
     Invoker<T> getInvoker();
 
     /**
      * unexport.
+     *
+     * 取消发布底层的Invoker对象
      * <p>
      * <code>
      * getInvoker().destroy();
