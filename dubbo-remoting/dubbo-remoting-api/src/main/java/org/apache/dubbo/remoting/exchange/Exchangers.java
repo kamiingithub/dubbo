@@ -28,6 +28,8 @@ import org.apache.dubbo.remoting.transport.ChannelHandlerAdapter;
 
 /**
  * Exchanger facade. (API, Static, ThreadSafe)
+ *
+ * Exchanger层的门面类
  */
 public class Exchangers {
 
@@ -114,6 +116,11 @@ public class Exchangers {
         return getExchanger(type);
     }
 
+    /**
+     * SPI
+     * @param type
+     * @return
+     */
     public static Exchanger getExchanger(String type) {
         return ExtensionLoader.getExtensionLoader(Exchanger.class).getExtension(type);
     }

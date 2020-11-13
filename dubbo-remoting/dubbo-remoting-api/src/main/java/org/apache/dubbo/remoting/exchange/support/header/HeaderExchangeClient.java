@@ -42,6 +42,9 @@ import static org.apache.dubbo.remoting.utils.UrlUtils.getIdleTimeout;
 
 /**
  * DefaultMessageClient
+ *
+ * Client  的装饰器
+ * ExchangeChannel 的装饰器
  */
 public class HeaderExchangeClient implements ExchangeClient {
 
