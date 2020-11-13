@@ -57,8 +57,16 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         this.handler = handler;
     }
 
+    /**
+     * 收到响应
+     *
+     * @param channel
+     * @param response
+     * @throws RemotingException
+     */
     static void handleResponse(Channel channel, Response response) throws RemotingException {
         if (response != null && !response.isHeartbeat()) {
+            // 调用DefaultFuture的received方法
             DefaultFuture.received(channel, response);
         }
     }
@@ -173,7 +181,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
     }
 
     /**
-     * ***对 Request 和 Response 的不同处理逻辑
+     * *** 对 Request 和 Response 的不同处理逻辑
      *
      * @param channel channel.
      * @param message message.
