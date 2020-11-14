@@ -28,8 +28,14 @@ public abstract class AbstractExporter<T> implements Exporter<T> {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
+    /**
+     * 包的invoker对象
+     */
     private final Invoker<T> invoker;
 
+    /**
+     * 撤销暴露标识
+     */
     private volatile boolean unexported = false;
 
     public AbstractExporter(Invoker<T> invoker) {

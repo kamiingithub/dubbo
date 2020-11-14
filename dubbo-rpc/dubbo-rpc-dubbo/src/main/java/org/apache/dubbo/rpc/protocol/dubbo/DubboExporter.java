@@ -27,8 +27,17 @@ import java.util.Map;
  */
 public class DubboExporter<T> extends AbstractExporter<T> {
 
+    /**
+     * ServiceKey
+     */
     private final String key;
 
+    /**
+     * (AbstractProtocol 层的)
+     * 用于暴露出去的服务集合
+     * 其中的 Key 通过 ProtocolUtils.serviceKey() 方法创建的服务标识
+     * 在 ProtocolUtils 中维护了多层的 Map 结构
+     */
     private final Map<String, Exporter<?>> exporterMap;
 
     public DubboExporter(Invoker<T> invoker, String key, Map<String, Exporter<?>> exporterMap) {
