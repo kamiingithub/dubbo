@@ -201,6 +201,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
                     // 2.双向请求
                     handleRequest(exchangeChannel, request);
                 } else {
+                    // 3.单向请求
                     handler.received(exchangeChannel, request.getData());
                 }
             }

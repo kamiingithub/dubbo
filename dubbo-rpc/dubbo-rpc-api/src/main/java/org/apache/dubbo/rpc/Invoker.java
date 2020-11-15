@@ -39,7 +39,7 @@ public interface Invoker<T> extends Node {
     /**
      * invoke.
      *
-     * 进行一次调用，也有人称之为一次"会话"，你可以理解为一次调用
+     * 进行一次调用
      *
      * @param invocation
      * @return result

@@ -25,13 +25,25 @@ import java.util.concurrent.atomic.AtomicInteger;
  * unless you know what you are doing.
  */
 public final class InternalThreadLocalMap {
-
+    /**
+     * 用于存储绑定到当前线程的数据(数组)
+     */
     private Object[] indexedVariables;
 
+    /**
+     * 当使用原生 Thread 的时候，会使用该 ThreadLocal 存储 InternalThreadLocalMap
+     * 这是一个降级策略
+     */
     private static ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = new ThreadLocal<InternalThreadLocalMap>();
 
+    /**
+     * 自增索引，用于计算下次存储到 indexedVariables 数组中的位置
+     */
     private static final AtomicInteger NEXT_INDEX = new AtomicInteger();
 
+    /**
+     * 当一个与线程绑定的值被删除之后，会被设置为 UNSET 值
+     */
     public static final Object UNSET = new Object();
 
     public static InternalThreadLocalMap getIfSet() {
@@ -91,10 +103,12 @@ public final class InternalThreadLocalMap {
     public boolean setIndexedVariable(int index, Object value) {
         Object[] lookup = indexedVariables;
         if (index < lookup.length) {
+            // 将value存储到index指定的位置
             Object oldValue = lookup[index];
             lookup[index] = value;
             return oldValue == UNSET;
         } else {
+            // 当index超过indexedVariables数组的长度时，需要对indexedVariables数组进行扩容
             expandIndexedVariableTableAndSet(index, value);
             return true;
         }

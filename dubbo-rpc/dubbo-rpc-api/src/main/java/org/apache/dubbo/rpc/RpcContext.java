@@ -54,6 +54,8 @@ public class RpcContext {
 
     /**
      * use internal thread local to improve performance
+     *
+     * // 在发起请求时，会使用该RpcContext来存储上下文信息
      */
     // FIXME REQUEST_CONTEXT
     private static final InternalThreadLocal<RpcContext> LOCAL = new InternalThreadLocal<RpcContext>() {
@@ -64,6 +66,9 @@ public class RpcContext {
     };
 
     // FIXME RESPONSE_CONTEXT
+    /**
+     * 在接收到响应的时候，会使用该RpcContext来存储上下文信息
+     */
     private static final InternalThreadLocal<RpcContext> SERVER_LOCAL = new InternalThreadLocal<RpcContext>() {
         @Override
         protected RpcContext initialValue() {
@@ -71,7 +76,13 @@ public class RpcContext {
         }
     };
 
+    /**
+     * 记录调用上下文的附加信息，这些信息会被添加到 Invocation 中，并传递到远端节点
+     */
     protected final Map<String, Object> attachments = new HashMap<>();
+    /**
+     * 用来记录上下文的键值对信息，但是不会被传递到远端节点
+     */
     private final Map<String, Object> values = new HashMap<String, Object>();
 
     private List<URL> urls;
@@ -101,6 +112,9 @@ public class RpcContext {
     // we want these objects to be as generic as possible
     private Object request;
     private Object response;
+    /**
+     * 异步Context，其中可以存储异步调用相关的 RpcContext 以及异步请求相关的 Future
+     */
     private AsyncContext asyncContext;
 
     private boolean remove = true;

@@ -30,6 +30,8 @@ import java.util.List;
 
 /**
  * ListenerInvoker
+ *
+ * Invoker 的装饰器
  */
 public class ListenerInvokerWrapper<T> implements Invoker<T> {
 
@@ -43,12 +45,15 @@ public class ListenerInvokerWrapper<T> implements Invoker<T> {
         if (invoker == null) {
             throw new IllegalArgumentException("invoker == null");
         }
+        // 底层被修饰的Invoker对象
         this.invoker = invoker;
+        // 监听器集合
         this.listeners = listeners;
         if (CollectionUtils.isNotEmpty(listeners)) {
             for (InvokerListener listener : listeners) {
                 if (listener != null) {
                     try {
+                        // 在服务引用过程中触发全部InvokerListener监听器
                         listener.referred(invoker);
                     } catch (Throwable t) {
                         logger.error(t.getMessage(), t);

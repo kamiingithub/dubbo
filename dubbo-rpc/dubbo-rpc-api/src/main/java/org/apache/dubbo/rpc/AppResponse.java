@@ -49,10 +49,20 @@ public class AppResponse implements Result {
 
     private static final long serialVersionUID = -6925924956850004727L;
 
+    /**
+     * 服务端返回的结果值
+     * 如demo中的"Hello Dubbo xxx"
+     */
     private Object result;
 
+    /**
+     * 服务端返回的exception
+     */
     private Throwable exception;
 
+    /**
+     * 服务端返回的attachments
+     */
     private Map<String, Object> attachments = new HashMap<>();
 
     public AppResponse() {
@@ -88,6 +98,7 @@ public class AppResponse implements Result {
             }
             throw exception;
         }
+        // 正常返回无异常时，直接返回result
         return result;
     }
 
