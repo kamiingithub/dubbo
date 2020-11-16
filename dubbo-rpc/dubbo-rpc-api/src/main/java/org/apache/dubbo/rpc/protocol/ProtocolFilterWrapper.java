@@ -29,6 +29,7 @@ import org.apache.dubbo.rpc.Protocol;
 import org.apache.dubbo.rpc.ProtocolServer;
 import org.apache.dubbo.rpc.Result;
 import org.apache.dubbo.rpc.RpcException;
+import org.apache.dubbo.rpc.filter.ConsumerContextFilter;
 
 import java.util.List;
 
@@ -51,8 +52,13 @@ public class ProtocolFilterWrapper implements Protocol {
 
     private static <T> Invoker<T> buildInvokerChain(final Invoker<T> invoker, String key, String group) {
         Invoker<T> last = invoker;
-        // 激活filter
-        // demo中激活了三个filter：ConsumerContextFilter、FutureFilter、MonitorFilter
+        /**
+         * demo consumer激活了3个filter：
+         * @see ConsumerContextFilter
+         * @see org.apache.dubbo.rpc.protocol.dubbo.filter.FutureFilter
+         * @see org.apache.dubbo.monitor.support.MonitorFilter
+         */
+        // demo provider激活了8非filter
         // 根据 URL 中携带的配置信息，确定当前激活的 Filter 扩展实现有哪些，形成 Filter 集合
         List<Filter> filters = ExtensionLoader.getExtensionLoader(Filter.class).getActivateExtension(invoker.getUrl(), key, group);
 

@@ -61,6 +61,9 @@ import static org.apache.dubbo.rpc.Constants.ACCESS_LOG_KEY;
  *    &lt;appender-ref ref="foo" /&gt;
  * &lt;/logger&gt;
  * </pre></code>
+ *
+ *
+ * 主要用于记录日志，它的主要功能是将 Provider 或者 Consumer 的日志信息写入文件中
  */
 @Activate(group = PROVIDER, value = ACCESS_LOG_KEY)
 public class AccessLogFilter implements Filter {

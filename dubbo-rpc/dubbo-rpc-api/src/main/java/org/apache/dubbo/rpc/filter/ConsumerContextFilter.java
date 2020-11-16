@@ -46,6 +46,7 @@ public class ConsumerContextFilter implements Filter {
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
         RpcContext context = RpcContext.getContext();
+        // 在当前的 RpcContext 中记录本地调用的一些状态信息
         context.setInvoker(invoker)
                 .setInvocation(invocation)
                 .setLocalAddress(NetUtils.getLocalHost(), 0)
@@ -57,6 +58,7 @@ public class ConsumerContextFilter implements Filter {
         }
 
         // pass default timeout set by end user (ReferenceConfig)
+        // 检测是否超时
         Object countDown = context.get(TIME_COUNTDOWN_KEY);
         if (countDown != null) {
             TimeoutCountDown timeoutCountDown = (TimeoutCountDown) countDown;
