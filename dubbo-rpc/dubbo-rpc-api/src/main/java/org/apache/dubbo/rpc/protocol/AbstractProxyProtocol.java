@@ -84,7 +84,9 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
                 return exporter;
             }
         }
+        // 通过ProxyFactory创建代理类，将Invoker封装成业务接口的代理类
         final Runnable runnable = doExport(proxyFactory.getProxy(invoker, true), invoker.getInterface(), invoker.getUrl());
+        // doExport()方法返回的Runnable是一个回调，其中会销毁底层的Server，将会在unexport()方法中调用该Runnable
         exporter = new AbstractExporter<T>(invoker) {
             @Override
             public void unexport() {
