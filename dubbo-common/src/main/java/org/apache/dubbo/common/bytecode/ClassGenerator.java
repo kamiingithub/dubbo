@@ -290,17 +290,22 @@ public final class ClassGenerator {
         if (mCtc != null) {
             mCtc.detach();
         }
+        // 在代理类继承父类的时候，会将该id作为后缀编号，防止代理类重名
         long id = CLASS_NAME_COUNTER.getAndIncrement();
         try {
             CtClass ctcs = mSuperClass == null ? null : mPool.get(mSuperClass);
             if (mClassName == null) {
+                // 确定代理类的名称
                 mClassName = (mSuperClass == null || javassist.Modifier.isPublic(ctcs.getModifiers())
                         ? ClassGenerator.class.getName() : mSuperClass + "$sc") + id;
             }
+            // 创建CtClass，用来生成代理类
             mCtc = mPool.makeClass(mClassName);
             if (mSuperClass != null) {
+                // 设置代理类的父类
                 mCtc.setSuperclass(ctcs);
             }
+            // 设置代理类实现的接口，默认会添加DC这个接口
             mCtc.addInterface(mPool.get(DC.class.getName())); // add dynamic class tag.
             if (mInterfaces != null) {
                 for (String cl : mInterfaces) {
@@ -309,10 +314,12 @@ public final class ClassGenerator {
             }
             if (mFields != null) {
                 for (String code : mFields) {
+                    // 设置代理类的字段
                     mCtc.addField(CtField.make(code, mCtc));
                 }
             }
             if (mMethods != null) {
+                // 生成代理类的方法
                 for (String code : mMethods) {
                     if (code.charAt(0) == ':') {
                         mCtc.addMethod(CtNewMethod.copy(getCtMethod(mCopyMethods.get(code.substring(1))),
@@ -323,9 +330,11 @@ public final class ClassGenerator {
                 }
             }
             if (mDefaultConstructor) {
+                // 生成默认的构造方法
                 mCtc.addConstructor(CtNewConstructor.defaultConstructor(mCtc));
             }
             if (mConstructors != null) {
+                // 生成构造方法
                 for (String code : mConstructors) {
                     if (code.charAt(0) == ':') {
                         mCtc.addConstructor(CtNewConstructor
