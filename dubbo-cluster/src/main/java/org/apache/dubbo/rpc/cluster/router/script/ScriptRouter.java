@@ -54,22 +54,37 @@ public class ScriptRouter extends AbstractRouter {
     private static final int SCRIPT_ROUTER_DEFAULT_PRIORITY = 0;
     private static final Logger logger = LoggerFactory.getLogger(ScriptRouter.class);
 
+    /**
+     * 这是一个 static 集合，其中的 Key 是脚本语言的名称，Value 是对应的 ScriptEngine 对象
+     */
     private static final Map<String, ScriptEngine> ENGINES = new ConcurrentHashMap<>();
 
+    /**
+     * 当前 ScriptRouter 使用的 ScriptEngine 对象
+     */
     private final ScriptEngine engine;
 
+    /**
+     * 当前 ScriptRouter 使用的具体脚本内容
+     */
     private final String rule;
 
+    /**
+     * 根据 rule 这个具体脚本内容编译得到
+     */
     private CompiledScript function;
 
     public ScriptRouter(URL url) {
         this.url = url;
         this.priority = url.getParameter(PRIORITY_KEY, SCRIPT_ROUTER_DEFAULT_PRIORITY);
 
+        // 根据URL中的type参数值，从ENGINES集合中获取对应的ScriptEngine对象
         engine = getEngine(url);
+        // 获取URL中的rule参数值，即为具体的脚本
         rule = getRule(url);
         try {
             Compilable compilable = (Compilable) engine;
+            // 编译rule字段中的脚本，得到function字段
             function = compilable.compile(rule);
         } catch (ScriptException e) {
             logger.error("route error, rule has been ignored. rule: " + rule +
@@ -108,10 +123,12 @@ public class ScriptRouter extends AbstractRouter {
     @Override
     public <T> List<Invoker<T>> route(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
         try {
+            // 创建Bindings对象作为function函数的入参
             Bindings bindings = createBindings(invokers, invocation);
             if (function == null) {
                 return invokers;
             }
+            // 调用function函数，并在getRoutedInvokers()方法中整理得到的Invoker集合
             return getRoutedInvokers(function.eval(bindings));
         } catch (ScriptException e) {
             logger.error("route error, rule has been ignored. rule: " + rule + ", method:" +

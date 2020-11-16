@@ -51,13 +51,24 @@ import static org.apache.dubbo.rpc.cluster.Constants.RUNTIME_KEY;
 /**
  * ConditionRouter
  *
+ * 路由表达式例：host = 192.168.0.100 => host = 192.168.0.150
+ *
  */
 public class ConditionRouter extends AbstractRouter {
     public static final String NAME = "condition";
 
     private static final Logger logger = LoggerFactory.getLogger(ConditionRouter.class);
+    /**
+     * 用于切分路由规则的正则表达式
+     */
     protected static final Pattern ROUTE_PATTERN = Pattern.compile("([&!=,]*)\\s*([^&!=,\\s]+)");
+    /**
+     * Consumer 匹配的条件集合，通过解析条件表达式 rule 的 => 之前半部分，可以得到该集合中的内容
+     */
     protected Map<String, MatchPair> whenCondition;
+    /**
+     * Provider 匹配的条件集合，通过解析条件表达式 rule 的 => 之后半部分，可以得到该集合中的内容
+     */
     protected Map<String, MatchPair> thenCondition;
 
     private boolean enabled;
@@ -81,10 +92,13 @@ public class ConditionRouter extends AbstractRouter {
             if (rule == null || rule.trim().length() == 0) {
                 throw new IllegalArgumentException("Illegal route rule!");
             }
+            // 将路由规则中的"consumer."和"provider."字符串清理掉
             rule = rule.replace("consumer.", "").replace("provider.", "");
             int i = rule.indexOf("=>");
+            // 按照"=>"字符串进行分割，得到whenRule和thenRule两部分
             String whenRule = i < 0 ? null : rule.substring(0, i).trim();
             String thenRule = i < 0 ? rule.trim() : rule.substring(i + 2).trim();
+            // 解析whenRule和thenRule，得到whenCondition和thenCondition两个条件集合
             Map<String, MatchPair> when = StringUtils.isBlank(whenRule) || "true".equals(whenRule) ? new HashMap<String, MatchPair>() : parseRule(whenRule);
             Map<String, MatchPair> then = StringUtils.isBlank(thenRule) || "false".equals(thenRule) ? null : parseRule(thenRule);
             // NOTE: It should be determined on the business level whether the `When condition` can be empty or not.
@@ -95,6 +109,12 @@ public class ConditionRouter extends AbstractRouter {
         }
     }
 
+    /**
+     * string -> map
+     * @param rule
+     * @return
+     * @throws ParseException
+     */
     private static Map<String, MatchPair> parseRule(String rule)
             throws ParseException {
         Map<String, MatchPair> condition = new HashMap<String, MatchPair>();
@@ -105,17 +125,22 @@ public class ConditionRouter extends AbstractRouter {
         MatchPair pair = null;
         // Multiple values
         Set<String> values = null;
+        // 首先，按照ROUTE_PATTERN指定的正则表达式匹配整个条件表达式
         final Matcher matcher = ROUTE_PATTERN.matcher(rule);
+        // 遍历匹配的结果
         while (matcher.find()) { // Try to match one by one
+            // 每个匹配结果有两部分(分组)，第一部分是分隔符，第二部分是内容
             String separator = matcher.group(1);
             String content = matcher.group(2);
             // Start part of the condition expression.
-            if (StringUtils.isEmpty(separator)) {
+            if (StringUtils.isEmpty(separator)) {// ---(1) 没有分隔符，content即为参数名称
                 pair = new MatchPair();
+                // 初始化MatchPair对象，并将其与对应的Key(即content)记录到condition集合中
                 condition.put(content, pair);
             }
             // The KV part of the condition expression
             else if ("&".equals(separator)) {
+                // &分隔符表示多个表达式,会创建多个MatchPair对象
                 if (condition.get(content) == null) {
                     pair = new MatchPair();
                     condition.put(content, pair);
@@ -125,6 +150,7 @@ public class ConditionRouter extends AbstractRouter {
             }
             // The Value in the KV part.
             else if ("=".equals(separator)) {
+                // =以及!=两个分隔符表示KV的分界线
                 if (pair == null) {
                     throw new ParseException("Illegal route rule \""
                             + rule + "\", The error char '" + separator
@@ -149,6 +175,7 @@ public class ConditionRouter extends AbstractRouter {
             }
             // The Value in the KV part, if Value have more than one items.
             else if (",".equals(separator)) { // Should be separated by ','
+                // 逗号分隔符表示有多个Value值
                 if (values == null || values.isEmpty()) {
                     throw new ParseException("Illegal route rule \""
                             + rule + "\", The error char '" + separator
@@ -176,22 +203,22 @@ public class ConditionRouter extends AbstractRouter {
             return invokers;
         }
         try {
-            if (!matchWhen(url, invocation)) {
-                return invokers;
+            if (!matchWhen(url, invocation)) {// 匹配发起请求的Consumer是否符合表达式中=>之前的过滤条件
+                return invokers;// todo 为什么不符合不返回null
             }
             List<Invoker<T>> result = new ArrayList<Invoker<T>>();
-            if (thenCondition == null) {
+            if (thenCondition == null) {// 判断=>之后是否存在Provider过滤条件，若不存在则直接返回空集合，表示无Provider可用
                 logger.warn("The current consumer in the service blacklist. consumer: " + NetUtils.getLocalHost() + ", service: " + url.getServiceKey());
                 return result;
             }
-            for (Invoker<T> invoker : invokers) {
+            for (Invoker<T> invoker : invokers) {// 逐个判断Invoker是否符合表达式中=>之后的过滤条件
                 if (matchThen(invoker.getUrl(), url)) {
-                    result.add(invoker);
+                    result.add(invoker);// 记录符合条件的Invoker
                 }
             }
             if (!result.isEmpty()) {
                 return result;
-            } else if (force) {
+            } else if (force) {// 在无Invoker符合条件时，根据force决定是返回空集合还是返回全部Invoker
                 logger.warn("The route result is empty and force execute. consumer: " + NetUtils.getLocalHost() + ", service: " + url.getServiceKey() + ", router: " + url.getParameterAndDecoded(RULE_KEY));
                 return result;
             }
@@ -259,7 +286,13 @@ public class ConditionRouter extends AbstractRouter {
     }
 
     protected static final class MatchPair {
+        /**
+         * 匹配集合
+         */
         final Set<String> matches = new HashSet<String>();
+        /**
+         * 反匹配集合
+         */
         final Set<String> mismatches = new HashSet<String>();
 
         private boolean isMatch(String value, URL param) {
