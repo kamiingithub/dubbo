@@ -40,6 +40,8 @@ import java.util.stream.Collectors;
 
 /**
  * Abstract router which listens to dynamic configuration
+ *
+ * 在 ConditionRouter 基础上添加了动态配置的能力
  */
 public abstract class ListenableRouter extends AbstractRouter implements ConfigurationListener {
     public static final String NAME = "LISTENABLE_ROUTER";
