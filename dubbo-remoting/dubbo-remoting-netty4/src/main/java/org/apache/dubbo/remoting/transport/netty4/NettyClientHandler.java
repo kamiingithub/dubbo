@@ -41,6 +41,9 @@ public class NettyClientHandler extends ChannelDuplexHandler {
 
     private final URL url;
 
+    /**
+     * 主力
+     */
     private final ChannelHandler handler;
 
     public NettyClientHandler(URL url, ChannelHandler handler) {

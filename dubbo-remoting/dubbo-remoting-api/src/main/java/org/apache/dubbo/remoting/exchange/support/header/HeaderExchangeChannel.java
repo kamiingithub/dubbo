@@ -92,6 +92,9 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         send(message, false);
     }
 
+    /**
+     * oneway
+     */
     @Override
     public void send(Object message, boolean sent) throws RemotingException {
         if (closed) {
@@ -125,6 +128,9 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         return request(request, channel.getUrl().getPositiveParameter(TIMEOUT_KEY, DEFAULT_TIMEOUT), executor);
     }
 
+    /**
+     * twoway
+     */
     @Override
     public CompletableFuture<Object> request(Object request, int timeout, ExecutorService executor) throws RemotingException {
         if (closed) {

@@ -33,6 +33,10 @@ import java.util.concurrent.RejectedExecutionException;
 /**
  * Only request message will be dispatched to thread pool. Other messages like response, connect, disconnect,
  * heartbeat will be directly executed by I/O thread.
+ *
+ *
+ * 只会将请求消息派发到线程池进行处理
+ * 对于响应消息以及其他网络事件（例如，连接建立事件、连接断开事件、心跳消息等），ExecutionChannelHandler 会直接在 IO 线程中进行处理
  */
 public class ExecutionChannelHandler extends WrappedChannelHandler {
 
@@ -46,6 +50,9 @@ public class ExecutionChannelHandler extends WrappedChannelHandler {
 
         if (message instanceof Request) {
             try {
+                // 只会将请求消息派发到线程池进行处理
+                // 对于响应消息以及其他网络事件（例如，连接建立事件、连接断开事件、心跳消息等）
+                // ExecutionChannelHandler 会直接在 IO 线程中进行处理
                 executor.execute(new ChannelEventRunnable(channel, handler, ChannelState.RECEIVED, message));
             } catch (Throwable t) {
                 // FIXME: when the thread pool is full, SERVER_THREADPOOL_EXHAUSTED_ERROR cannot return properly,

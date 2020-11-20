@@ -35,7 +35,9 @@ import java.util.concurrent.TimeoutException;
  *
  * Tasks submitted to this executor through {@link #execute(Runnable)} will not get scheduled to a specific thread, though normal executors always do the schedule.
  * Those tasks are stored in a blocking queue and will only be executed when a thread calls {@link #waitAndDrain()}, the thread executing the task
- * is exactly the same as the one calling waitAndDrain.
+ * is exactly the same as the one calling waitAndDrain.、
+ *
+ * ThreadlessExecutor 内部不管理任何线程
  */
 public class ThreadlessExecutor extends AbstractExecutorService {
     private static final Logger logger = LoggerFactory.getLogger(ThreadlessExecutor.class.getName());

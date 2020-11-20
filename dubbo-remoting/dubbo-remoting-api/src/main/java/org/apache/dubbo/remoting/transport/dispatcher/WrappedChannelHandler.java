@@ -112,15 +112,19 @@ public class WrappedChannelHandler implements ChannelHandlerDelegate {
             DefaultFuture responseFuture = DefaultFuture.getFuture(response.getId());
             // a typical scenario is the response returned after timeout, the timeout response may has completed the future
             if (responseFuture == null) {
+                // 1）DefaultFuture中无对应Future，返回共享线程池
                 return getSharedExecutorService();
             } else {
                 ExecutorService executor = responseFuture.getExecutor();
                 if (executor == null || executor.isShutdown()) {
+                    // 2）DefaultFuture中的Future关闭了，返回共享线程池
                     executor = getSharedExecutorService();
                 }
+                // 3）返回DefaultFuture中对应线程池
                 return executor;
             }
         } else {
+            // 4）非Resonse类型的消息，返回共享线程池
             return getSharedExecutorService();
         }
     }

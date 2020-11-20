@@ -25,6 +25,8 @@ import org.apache.dubbo.remoting.RemotingException;
 
 /**
  * AbstractPeer
+ *
+ * 可以理解为ChannelHandler的装饰器
  */
 public abstract class AbstractPeer implements Endpoint, ChannelHandler {
 
