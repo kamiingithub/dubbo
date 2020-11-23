@@ -312,9 +312,12 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                 serviceMetadata
         );
 
+        // 加载注册中心链接
         List<URL> registryURLs = ConfigValidationUtils.loadRegistries(this, true);
 
+        // 遍历 protocols，并在每个协议下暴露服务
         for (ProtocolConfig protocolConfig : protocols) {
+            // 以path、group、version来作为服务唯一性确定的key
             String pathKey = URL.buildKey(getContextPath(protocolConfig)
                     .map(p -> p + "/" + path)
                     .orElse(path), group, version);
@@ -322,6 +325,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
             repository.registerService(pathKey, interfaceClass);
             // TODO, uncomment this line once service key is unified
             serviceMetadata.setServiceKey(pathKey);
+            // 组装 URL
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }
     }
@@ -525,8 +529,11 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                 .setHost(LOCALHOST_VALUE)
                 .setPort(0)
                 .build();
+        // 通过代理工程创建invoker
+        // 再调用export方法进行暴露服务，生成Exporter
         Exporter<?> exporter = PROTOCOL.export(
                 PROXY_FACTORY.getInvoker(ref, (Class) interfaceClass, local));
+        // 把生成的暴露者加入集合
         exporters.add(exporter);
         logger.info("Export dubbo service " + interfaceClass.getName() + " to local registry url : " + local);
     }
