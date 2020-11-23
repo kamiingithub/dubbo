@@ -108,6 +108,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
             return;
         }
         // find handler by message class.
+        // 其实就是一个RpcInvocation对象
         Object msg = req.getData();
         try {
             // 交给上层实现的ExchangeHandler进行处理
@@ -190,35 +191,41 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
      */
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
+        // 获取通道
         final ExchangeChannel exchangeChannel = HeaderExchangeChannel.getOrAddChannel(channel);
         if (message instanceof Request) {
             // handle request.
             Request request = (Request) message;
             if (request.isEvent()) {
-                // 1.只读请求
+                // 1.只读请求或心跳事件
                 handlerEvent(channel, request);
             } else {
                 if (request.isTwoWay()) {
                     // 2.双向请求
                     handleRequest(exchangeChannel, request);
                 } else {
-                    // 3.单向请求
+                    // 3.单向请求，不需要响应
                     handler.received(exchangeChannel, request.getData());
                 }
             }
         } else if (message instanceof Response) {
+            // 处理响应
             handleResponse(channel, (Response) message);
         } else if (message instanceof String) {
+            // telnet请求
             if (isClientSide(channel)) {
+                // 如果是客户端侧,则直接抛出异常,因为客户端侧不支持telnet
                 Exception e = new Exception("Dubbo client can not supported string message: " + message + " in channel: " + channel + ", url: " + channel.getUrl());
                 logger.error(e.getMessage(), e);
             } else {
+                // 如果是服务端侧,则执行telnet命令
                 String echo = handler.telnet(channel, (String) message);
                 if (echo != null && echo.length() > 0) {
                     channel.send(echo);
                 }
             }
         } else {
+            // 如果都不是,则继续下一步
             handler.received(exchangeChannel, message);
         }
     }

@@ -99,7 +99,10 @@ public class NettyServerHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // 看是否在缓存中命中,如果没有命中,则创建NettyChannel并且缓存。
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
+        // 接收消息
+        // handler = AbstractPeer
         handler.received(channel, msg);
     }
 

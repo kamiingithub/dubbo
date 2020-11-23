@@ -38,11 +38,13 @@ public class MultiMessageHandler extends AbstractChannelHandlerDelegate {
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
         if (message instanceof MultiMessage) {
+            // 多消息类型则遍历发送
             MultiMessage list = (MultiMessage) message;
             for (Object obj : list) {
                 handler.received(channel, obj);
             }
         } else {
+            // 直接发送
             handler.received(channel, message);
         }
     }

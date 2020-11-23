@@ -107,6 +107,8 @@ public class DubboProtocol extends AbstractProtocol {
 
     /**
      * todo ExchangeHandler适配类
+     *
+     * important
      */
     private ExchangeHandler requestHandler = new ExchangeHandlerAdapter() {
 
