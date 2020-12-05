@@ -78,14 +78,17 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
             synchronized (this) {
                 if (failTimer == null) {
                     failTimer = new HashedWheelTimer(
+                            // 初始化时间轮，这个时间轮有32个槽，每个槽代表1秒
                             new NamedThreadFactory("failback-cluster-timer", true),
                             1,
                             TimeUnit.SECONDS, 32, failbackTasks);
                 }
             }
         }
+        // 创建一个定时任务
         RetryTimerTask retryTimerTask = new RetryTimerTask(loadbalance, invocation, invokers, lastInvoker, retries, RETRY_FAILED_PERIOD);
         try {
+            // 将定时任务添加到时间轮中
             failTimer.newTimeout(retryTimerTask, RETRY_FAILED_PERIOD, TimeUnit.SECONDS);
         } catch (Throwable e) {
             logger.error("Failback background works error,invocation->" + invocation + ", exception: " + e.getMessage());
@@ -102,6 +105,7 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
         } catch (Throwable e) {
             logger.error("Failback to invoke method " + invocation.getMethodName() + ", wait for retry in background. Ignored exception: "
                     + e.getMessage() + ", ", e);
+            // 请求失败之后，会添加一个定时任务进行重试
             addFailed(loadbalance, invocation, invokers, invoker);
             return AsyncRpcResult.newDefaultAsyncResult(null, null, invocation); // ignore
         }
@@ -139,14 +143,17 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
         @Override
         public void run(Timeout timeout) {
             try {
+                // 重新选择Invoker对象，注意，这里会将上次重试失败的Invoker作为selected集合传入
                 Invoker<T> retryInvoker = select(loadbalance, invocation, invokers, Collections.singletonList(lastInvoker));
                 lastInvoker = retryInvoker;
                 retryInvoker.invoke(invocation);
             } catch (Throwable e) {
                 logger.error("Failed retry to invoke method " + invocation.getMethodName() + ", waiting again.", e);
                 if ((++retryTimes) >= retries) {
+                    // 重试次数达到上限，输出警告日志
                     logger.error("Failed retry times exceed threshold (" + retries + "), We have to abandon, invocation->" + invocation);
                 } else {
+                    // 重试次数未达到上限，则重新添加定时任务，等待重试
                     rePut(timeout);
                 }
             }
@@ -162,6 +169,7 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
                 return;
             }
 
+            // 重新添加定时任务
             timer.newTimeout(timeout.task(), tick, TimeUnit.SECONDS);
         }
     }

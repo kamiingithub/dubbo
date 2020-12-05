@@ -59,6 +59,7 @@ public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
             }
         }
         if (exception != null) {
+            // 出现任何异常，都会在这里抛出
             throw exception;
         }
         return result;

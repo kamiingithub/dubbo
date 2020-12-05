@@ -36,10 +36,12 @@ public abstract class AbstractCluster implements Cluster {
 
     private <T> Invoker<T> buildClusterInterceptors(AbstractClusterInvoker<T> clusterInvoker, String key) {
         AbstractClusterInvoker<T> last = clusterInvoker;
+        // 通过SPI方式加载ClusterInterceptor扩展实现
         List<ClusterInterceptor> interceptors = ExtensionLoader.getExtensionLoader(ClusterInterceptor.class).getActivateExtension(clusterInvoker.getUrl(), key);
 
         if (!interceptors.isEmpty()) {
             for (int i = interceptors.size() - 1; i >= 0; i--) {
+                // 将InterceptorInvokerNode收尾连接到一起，形成调用链
                 final ClusterInterceptor interceptor = interceptors.get(i);
                 final AbstractClusterInvoker<T> next = last;
                 last = new InterceptorInvokerNode<>(clusterInvoker, interceptor, next);
@@ -50,6 +52,8 @@ public abstract class AbstractCluster implements Cluster {
 
     @Override
     public <T> Invoker<T> join(Directory<T> directory) throws RpcException {
+        // 调用 buildClusterInterceptors() 方法加载 ClusterInterceptor 扩展实现类，对 Invoker 对象进行包装
+        // 扩展名称由reference.interceptor参数确定
         return buildClusterInterceptors(doJoin(directory), directory.getUrl().getParameter(REFERENCE_INTERCEPTOR_KEY));
     }
 
@@ -89,15 +93,18 @@ public abstract class AbstractCluster implements Cluster {
             Result asyncResult;
             try {
                 interceptor.before(next, invocation);
+                // 执行invoke()方法完成远程调用
                 asyncResult = interceptor.intercept(next, invocation);
             } catch (Exception e) {
                 // onError callback
                 if (interceptor instanceof ClusterInterceptor.Listener) {
                     ClusterInterceptor.Listener listener = (ClusterInterceptor.Listener) interceptor;
+                    // 出现异常时，会触发监听器的onError()方法
                     listener.onError(e, clusterInvoker, invocation);
                 }
                 throw e;
             } finally {
+                // 执行后置逻辑
                 interceptor.after(next, invocation);
             }
             return asyncResult.whenCompleteWithContext((r, t) -> {
@@ -105,6 +112,7 @@ public abstract class AbstractCluster implements Cluster {
                 if (interceptor instanceof ClusterInterceptor.Listener) {
                     ClusterInterceptor.Listener listener = (ClusterInterceptor.Listener) interceptor;
                     if (t == null) {
+                        // 正常返回时，会调用onMessage()方法触发监听器
                         listener.onMessage(r, clusterInvoker, invocation);
                     } else {
                         listener.onError(t, clusterInvoker, invocation);

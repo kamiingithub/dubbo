@@ -65,11 +65,14 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
         try {
             checkInvokers(invokers, invocation);
             final List<Invoker<T>> selected;
+            // 从URL中获取forks参数，作为并发请求的上限，默认值为2
             final int forks = getUrl().getParameter(FORKS_KEY, DEFAULT_FORKS);
             final int timeout = getUrl().getParameter(TIMEOUT_KEY, DEFAULT_TIMEOUT);
             if (forks <= 0 || forks >= invokers.size()) {
+                // 如果forks为负数或是大于Invoker集合的长度，会直接并发调用全部Invoker
                 selected = invokers;
             } else {
+                // 按照forks指定的并发度，选择此次并发调用的Invoker对象
                 selected = new ArrayList<>(forks);
                 while (selected.size() < forks) {
                     Invoker<T> invoker = select(loadbalance, invocation, invokers, selected);
@@ -80,33 +83,41 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
                 }
             }
             RpcContext.getContext().setInvokers((List) selected);
+            // 记录失败的请求个数
             final AtomicInteger count = new AtomicInteger();
+            // 用于记录请求结果
             final BlockingQueue<Object> ref = new LinkedBlockingQueue<>();
             for (final Invoker<T> invoker : selected) {
                 executor.execute(() -> {
                     try {
                         Result result = invoker.invoke(invocation);
+                        // 将请求结果写到ref队列中
                         ref.offer(result);
                     } catch (Throwable e) {
                         int value = count.incrementAndGet();
                         if (value >= selected.size()) {
+                            // 如果失败的请求个数超过了并发请求的个数，则向ref队列中写入异常
                             ref.offer(e);
                         }
                     }
                 });
             }
             try {
+                // 当前线程会阻塞等待任意一个请求结果的出现
                 Object ret = ref.poll(timeout, TimeUnit.MILLISECONDS);
+                // 如果结果类型为Throwable，则抛出异常
                 if (ret instanceof Throwable) {
                     Throwable e = (Throwable) ret;
                     throw new RpcException(e instanceof RpcException ? ((RpcException) e).getCode() : 0, "Failed to forking invoke provider " + selected + ", but no luck to perform the invocation. Last error is: " + e.getMessage(), e.getCause() != null ? e.getCause() : e);
                 }
+                // 返回结果
                 return (Result) ret;
             } catch (InterruptedException e) {
                 throw new RpcException("Failed to forking invoke provider " + selected + ", but no luck to perform the invocation. Last error is: " + e.getMessage(), e);
             }
         } finally {
             // clear attachments which is binding to current thread.
+            // 清除上下文信息
             RpcContext.getContext().clearAttachments();
         }
     }
